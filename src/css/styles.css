@@ -1,0 +1,1134 @@
+/* ─────────────────────────────────────────────
+   TOKENS  (unchanged from original)
+───────────────────────────────────────────── */
+:root {
+  --paper: #faf8f5;
+  --paper-dim: #f1eee8;
+  --ink: #1c1b1a;
+  --ink-soft: #54514c;
+  --line: #e3ddd3;
+  --accent: #2f5d50;
+  --accent-soft: #e6efec;
+  --accent-strong: #1f4339;
+
+  /* Dark mode for live AR experience */
+  --bg-dark: #0b0b0c;
+  --glass: rgba(20, 20, 22, 0.55);
+  --glass-border: rgba(255,255,255,0.10);
+  --text-dark: #f3f1ed;
+  --muted-dark: rgba(243,241,237,0.55);
+  --blur: blur(16px);
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --container: 1120px;
+
+  /* ADDED: Mouse position for cursor glow (updated by JS) */
+  --mx: 50vw;
+  --my: 50vh;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+a { color: inherit; }
+
+/* ─────────────────────────────────────────────
+   ADDED: Grain / noise texture overlay
+   Uses SVG feTurbulence rendered to a data URI.
+   Sits above the page, pointer-events: none.
+───────────────────────────────────────────── */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+  opacity: 0.038;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* ADDED: Cursor glow that follows mouse — subtle warm circle */
+.cursor-glow {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(47,93,80,0.07) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  left: var(--mx);
+  top: var(--my);
+  transition: left 0.12s ease-out, top 0.12s ease-out;
+  will-change: left, top;
+}
+
+/* ─────────────────────────────────────────────
+   TOPBAR
+───────────────────────────────────────────── */
+.topbar {
+  max-width: var(--container);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 24px 0;
+  position: relative;
+}
+
+/* MODIFIED: Wordmark now contains SVG logo + text — flex row */
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: default;
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+  color: var(--ink);
+  user-select: none;
+}
+
+.wordmark:hover {
+  transform: rotate(-2deg) scale(1.04);
+}
+
+/* ADDED: LOGO SVG */
+.logo-svg {
+  width: 36px;
+  height: 25px;
+  color: var(--accent);
+  flex-shrink: 0;
+  /* Hover: arc charges up, spark fires */
+  transition: color 0.25s;
+}
+
+/* Arc draws on hover */
+.logo-arc {
+  stroke-dasharray: 56;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.5s cubic-bezier(.23,1,.32,1), opacity 0.3s;
+}
+
+.wordmark:hover .logo-arc {
+  stroke-dashoffset: -8;
+  opacity: 1;
+}
+
+/* Fingertip dots pulse on hover */
+.logo-tip {
+  transition: r 0.35s cubic-bezier(.34,1.56,.64,1), opacity 0.3s;
+}
+
+.wordmark:hover .logo-tip--left {
+  r: 4.2;
+  opacity: 1;
+}
+
+.wordmark:hover .logo-tip--right {
+  r: 4.2;
+  opacity: 1;
+  transition-delay: 0.08s;
+}
+
+/* Spark at arc peak appears on hover */
+.logo-spark {
+  transition: opacity 0.2s 0.18s, r 0.3s 0.18s cubic-bezier(.34,1.56,.64,1);
+}
+
+.wordmark:hover .logo-spark {
+  opacity: 0.85;
+  r: 2.4;
+}
+
+/* Wordmark text */
+.wordmark-text {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+/* ADDED: Wordmark easter egg — shake when clicked (JS adds class) */
+.wordmark.shake {
+  animation: wordmark-shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes wordmark-shake {
+  10%, 90% { transform: rotate(-1deg) translateX(-2px); }
+  20%, 80% { transform: rotate(2deg) translateX(3px); }
+  30%, 50%, 70% { transform: rotate(-3deg) translateX(-4px); }
+  40%, 60% { transform: rotate(2deg) translateX(4px); }
+}
+
+/* ADDED: Nav with annotation */
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.topbar-link {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.topbar-link:hover { color: var(--ink); border-color: var(--ink-soft); }
+
+/* ADDED: Annotation label near nav */
+.nav-annotation {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--accent);
+  opacity: 0.6;
+  letter-spacing: 0.02em;
+  transform: rotate(-2deg);
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────
+   HERO
+───────────────────────────────────────────── */
+.hero {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 72px 24px 96px;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 64px;
+  align-items: center;
+  position: relative;
+}
+
+/* ADDED: Scattered background glyphs */
+.hero-bg-glyphs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.glyph {
+  position: absolute;
+  left: var(--gx);
+  top: var(--gy);
+  transform: rotate(var(--gr));
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  color: var(--accent);
+  opacity: 0;
+  animation: glyph-float 6s ease-in-out infinite var(--gd);
+}
+
+@keyframes glyph-float {
+  0%   { opacity: 0;    transform: rotate(var(--gr)) translateY(6px); }
+  15%  { opacity: 0.18; }
+  50%  { opacity: 0.12; transform: rotate(var(--gr)) translateY(-4px); }
+  85%  { opacity: 0.18; }
+  100% { opacity: 0;    transform: rotate(var(--gr)) translateY(6px); }
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 22px;
+  opacity: 0.8;
+}
+
+/* MODIFIED: More expressive heading with italic + light weight variation */
+.hero-copy h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.8rem, 6vw, 4.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  margin-bottom: 28px;
+  max-width: 14ch;
+}
+
+/* ADDED: Italic line in heading — Fraunces italic has beautiful optical swashes */
+.hero-copy h1 em {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--accent);
+  font-size: 0.92em;
+  letter-spacing: -0.01em;
+}
+
+/* ADDED: Lighter weight final word */
+.h1-light {
+  font-weight: 300;
+  letter-spacing: -0.03em;
+}
+
+.hero-hook {
+  font-size: 1.06rem;
+  color: var(--ink-soft);
+  max-width: 44ch;
+  margin-bottom: 36px;
+  line-height: 1.7;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+/* MODIFIED + ADDED: CTA with charge-up effect on hover */
+.btn-primary {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 15px 32px;
+  border: none;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s ease, transform 0.18s ease, box-shadow 0.2s ease;
+  isolation: isolate;
+}
+
+.btn-inner {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ADDED: Hover glow beneath button */
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 13px;
+  background: var(--accent);
+  opacity: 0;
+  filter: blur(12px);
+  z-index: -1;
+  transition: opacity 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: var(--accent-strong);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px -8px rgba(47,93,80,0.5);
+}
+
+.btn-primary:hover::before { opacity: 0.6; }
+.btn-primary:active { transform: translateY(0); box-shadow: none; }
+.btn-primary:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+
+/* ADDED: Click ripple inside button */
+.btn-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  width: 0; height: 0;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  pointer-events: none;
+}
+
+.btn-ripple.rippling {
+  animation: ripple-expand 0.55s ease-out forwards;
+}
+
+@keyframes ripple-expand {
+  to {
+    width: 280px;
+    height: 280px;
+    opacity: 0;
+  }
+}
+
+.cam-note {
+  font-size: 0.83rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+}
+
+/* ADDED: Handwritten-style annotation below CTA */
+.cta-annotation {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  opacity: 0.55;
+  margin-top: 12px;
+  letter-spacing: 0.02em;
+  transform: rotate(-1deg);
+  display: inline-block;
+}
+
+/* ─────────────────────────────────────────────
+   HERO VISUAL — parallax frame
+───────────────────────────────────────────── */
+.hero-visual {
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+/* ADDED: Note bleeding out past the frame */
+.visual-note {
+  position: absolute;
+  bottom: -22px;
+  right: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--ink-soft);
+  opacity: 0.5;
+  transform: rotate(1.5deg);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.hero-frame {
+  position: relative;
+  width: 100%;
+  max-width: 390px;
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(170deg, #13201b 0%, #0b1210 100%);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow:
+    0 24px 60px -24px rgba(31, 67, 57, 0.4),
+    0 0 0 1px rgba(125,217,189,0.08);
+  /* MODIFIED: Slightly less rotation, feels more intentional */
+  transform: rotate(1.2deg);
+  transition: transform 0.6s cubic-bezier(.23,1,.32,1), box-shadow 0.4s ease;
+  will-change: transform;
+}
+
+.hero-frame:hover {
+  transform: rotate(0deg) scale(1.01);
+  box-shadow:
+    0 32px 80px -24px rgba(31, 67, 57, 0.5),
+    0 0 0 1px rgba(125,217,189,0.14);
+}
+
+/* ADDED: Cam bar at top */
+.hero-cam-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 16px;
+  background: rgba(0,0,0,0.25);
+  z-index: 10;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.cam-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+}
+
+.cam-dot:first-child { background: rgba(255,100,100,0.5); }
+.cam-dot:nth-child(2) { background: rgba(255,200,60,0.4); }
+.cam-dot:nth-child(3) { background: rgba(80,220,130,0.4); }
+
+.cam-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.1em;
+  margin-left: auto;
+}
+
+/* ADDED: Depth layers for parallax */
+.frame-layer {
+  position: absolute;
+  inset: 36px 0 0;
+  pointer-events: none;
+}
+
+.frame-glow-a {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 65%, rgba(125,217,189,0.28), transparent 50%),
+    radial-gradient(circle at 72% 35%, rgba(167,139,250,0.18), transparent 55%);
+  filter: blur(3px);
+  animation: drift 11s ease-in-out infinite;
+}
+
+.frame-glow-b {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 55% 55%, rgba(125,217,189,0.12), transparent 60%);
+  animation: drift 8s ease-in-out infinite reverse;
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(1.5%, -2%) scale(1.03); }
+  66%  { transform: translate(-1%, 1.5%) scale(0.98); }
+}
+
+/* ADDED: Hand SVG hint inside frame */
+.hand-hint {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-52%) rotate(-4deg);
+  width: 80px;
+  opacity: 0.9;
+  animation: hand-breathe 4s ease-in-out infinite;
+}
+
+@keyframes hand-breathe {
+  0%, 100% { transform: translateX(-52%) rotate(-4deg) translateY(0); }
+  50%       { transform: translateX(-52%) rotate(-4deg) translateY(-6px); }
+}
+
+/* ADDED: Pulsing fingertip circles */
+.tip-pulse {
+  animation: tip-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes tip-pulse {
+  0%, 100% { opacity: 0.55; r: 3; }
+  50%       { opacity: 1;    r: 4.5; }
+}
+
+/* ADDED: Particle field inside frame */
+.particle-field { position: absolute; inset: 0; }
+
+.dot {
+  position: absolute;
+  left: var(--dx);
+  top: var(--dy);
+  width: var(--ds);
+  height: var(--ds);
+  border-radius: 50%;
+  background: rgba(125,217,189,0.8);
+  animation: dot-blink 3s ease-in-out infinite var(--dd);
+}
+
+.dot--purple { background: rgba(167,139,250,0.8); }
+
+@keyframes dot-blink {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.8); }
+}
+
+/* ADDED: Frame bottom caption */
+.frame-caption {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.5;
+  z-index: 10;
+}
+
+/* ─────────────────────────────────────────────
+   SCROLL REVEAL
+   Elements with [data-reveal] fade+slide in
+   when they enter the viewport (JS-driven).
+───────────────────────────────────────────── */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s cubic-bezier(.23,1,.32,1),
+    transform 0.7s cubic-bezier(.23,1,.32,1);
+}
+
+[data-reveal].revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─────────────────────────────────────────────
+   EXPERIENCES / FEATURES
+───────────────────────────────────────────── */
+.experiences {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 24px 96px;
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 28px;
+}
+
+.exp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  /* ADDED: Slight grid offset for asymmetry */
+  padding-left: 2px;
+}
+
+/* MODIFIED: Cards get subtle individual rotation + hover lift */
+.exp-card {
+  background: var(--paper-dim);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px 26px 26px;
+  position: relative;
+  overflow: hidden;
+  transform: rotate(var(--card-rot, 0deg)) translateY(var(--card-top, 0px));
+  transition: transform 0.35s cubic-bezier(.23,1,.32,1), box-shadow 0.3s ease, background 0.2s;
+}
+
+.exp-card:hover {
+  transform: rotate(0deg) translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 40px -16px rgba(47,93,80,0.18);
+  background: var(--paper);
+  z-index: 2;
+}
+
+/* ADDED: Subtle top-left glow on hover */
+.exp-card::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(47,93,80,0.12), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.exp-card:hover::before { opacity: 1; }
+
+.exp-card--wide { grid-column: span 2; }
+
+/* ADDED: Corner decoration star mark */
+.card-corner {
+  position: absolute;
+  bottom: 14px;
+  right: 18px;
+  font-size: 0.7rem;
+  color: var(--accent);
+  opacity: 0.25;
+  transition: opacity 0.2s;
+}
+
+.exp-card:hover .card-corner { opacity: 0.65; }
+
+.exp-icon {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  color: var(--accent);
+  margin-bottom: 14px;
+  display: block;
+}
+
+.exp-card h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.14rem;
+  margin-bottom: 10px;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.exp-card p {
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  max-width: 40ch;
+  line-height: 1.65;
+}
+
+/* ─────────────────────────────────────────────
+   WHY THIS EXISTS
+───────────────────────────────────────────── */
+.why {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 24px 110px;
+  display: grid;
+  grid-template-columns: 0.38fr 0.62fr;
+  gap: 48px;
+}
+
+/* ADDED: Label + doodle arrow in left column */
+.why-label {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.why-arrow {
+  width: 54px;
+  color: var(--accent);
+  opacity: 0.35;
+  transform: rotate(8deg);
+}
+
+.why-body {
+  max-width: 56ch;
+}
+
+.why-body p {
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  margin-bottom: 18px;
+  line-height: 1.75;
+}
+
+.why-body p em {
+  font-style: italic;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.why-body p:last-child { margin-bottom: 0; }
+
+/* ADDED: Editorial aside block */
+.why-aside {
+  margin-top: 28px;
+  padding: 16px 20px;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.aside-marker {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+/* ─────────────────────────────────────────────
+   ADDED: Pre-footer interlude strip
+───────────────────────────────────────────── */
+.prefooter-strip {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 48px 24px 72px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  border-top: 1px solid var(--line);
+}
+
+.prefooter-text {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 1.6rem;
+  color: var(--ink-soft);
+  letter-spacing: -0.01em;
+}
+
+/* ADDED: Ghost button style */
+.btn-ghost {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  padding: 10px 20px;
+  border: 1px solid var(--line);
+  border-radius: 40px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ─────────────────────────────────────────────
+   ADDED: Personal signature — "developed by chinmaya chamedia"
+   Lives just above footer. Minimal, rotated, mono.
+   Fades in on scroll (JS adds .sig-visible).
+   Hover reveals fully; click triggers a brief glow.
+───────────────────────────────────────────── */
+.dev-signature {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 24px 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  /* Initially quiet — barely there */
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.9s cubic-bezier(.23,1,.32,1),
+    transform 0.9s cubic-bezier(.23,1,.32,1);
+
+  /* Slightly off-centre, handcrafted */
+  padding-left: 28px;
+}
+
+.dev-signature.sig-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sig-slash {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent);
+  opacity: 0.4;
+  letter-spacing: -0.02em;
+}
+
+.sig-dot {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent);
+  opacity: 0.25;
+}
+
+.sig-text {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  opacity: 0.38;
+  letter-spacing: 0.03em;
+  transform: rotate(-0.8deg);
+  display: inline-block;
+
+  /* Transition on hover */
+  transition: opacity 0.35s ease, color 0.35s ease, letter-spacing 0.4s ease;
+}
+
+.sig-text strong {
+  font-weight: 500;
+  color: var(--accent);
+}
+
+/* Hover: comes forward */
+.dev-signature:hover .sig-text {
+  opacity: 0.82;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.dev-signature:hover .sig-text strong {
+  color: var(--accent-strong);
+}
+
+.dev-signature:hover .sig-slash { opacity: 0.7; }
+.dev-signature:hover .sig-dot   { opacity: 0.5; }
+
+/* Click glow burst (JS adds .sig-flash class) */
+.dev-signature.sig-flash .sig-text {
+  color: var(--accent-strong);
+  opacity: 1;
+  text-shadow: 0 0 18px rgba(47,93,80,0.35);
+}
+
+/* ─────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────── */
+.landing-footer {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.landing-footer p {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+/* ADDED: Easter egg trigger in footer */
+.footer-secret {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  opacity: 0.25;
+  letter-spacing: 0.3em;
+  cursor: pointer;
+  transition: opacity 0.3s, letter-spacing 0.5s;
+  user-select: none;
+}
+
+.footer-secret:hover {
+  opacity: 0.8;
+  letter-spacing: 0.5em;
+}
+
+/* ADDED: Easter egg revealed state */
+.footer-secret.revealed-secret {
+  opacity: 1;
+  letter-spacing: 0.08em;
+  color: var(--accent-strong);
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    padding-top: 48px;
+    padding-bottom: 64px;
+  }
+  .hero-visual { order: -1; }
+  .hero-frame { max-width: 320px; }
+  .exp-grid { grid-template-columns: 1fr 1fr; }
+  .exp-card--wide { grid-column: span 2; }
+  .why { grid-template-columns: 1fr; gap: 20px; }
+  .why-arrow { display: none; }
+  .prefooter-strip { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .landing-footer { flex-direction: column; gap: 12px; }
+}
+
+@media (max-width: 540px) {
+  .topbar { padding: 22px 18px 0; }
+  .nav-annotation { display: none; }
+  .hero { padding: 40px 18px 56px; }
+  .hero-copy h1 { font-size: 2.5rem; max-width: none; }
+  .exp-grid { grid-template-columns: 1fr; }
+  .exp-card--wide { grid-column: span 1; }
+  .why, .experiences { padding-left: 18px; padding-right: 18px; }
+  .landing-footer, .prefooter-strip { padding-left: 18px; padding-right: 18px; }
+}
+
+/* ─────────────────────────────────────────────
+   LIVE AR EXPERIENCE  (unchanged behaviour)
+───────────────────────────────────────────── */
+#experience {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-dark);
+  color: var(--text-dark);
+  font-family: var(--font-body);
+  z-index: 1000;
+}
+
+#experience[hidden] { display: none; }
+#video-wrap { position: absolute; inset: 0; }
+
+video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  filter: brightness(0.55) contrast(1.15) saturate(0.8);
+  z-index: 0;
+}
+
+#bgCanvas, #fxCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+#bgCanvas { z-index: 1; }
+#fxCanvas { z-index: 5; }
+
+#exitBtn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 60;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 10px 18px;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#exitBtn:hover { background: rgba(255,255,255,0.12); }
+#exitBtn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+#hud {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.panel {
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  min-width: 180px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+}
+
+.panel-title {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-dark);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.7);
+  gap: 16px;
+}
+.stat:last-child { margin-bottom: 0; }
+
+.val {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: #7dd9bd;
+  font-size: 0.85rem;
+}
+
+#themes {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  gap: 6px;
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 40px;
+  padding: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  max-width: calc(100vw - 32px);
+  overflow-x: auto;
+}
+
+.tbtn {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 30px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tbtn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+.tbtn.active {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.18);
+  color: #fff;
+}
+
+.tbtn:focus-visible, #exitBtn:focus-visible { outline-offset: 2px; }
+
+#toast {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 50;
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: #7dd9bd;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  letter-spacing: 0.04em;
+}
+
+#toast.show { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 600px) {
+  #hud { top: 12px; right: 12px; }
+  .panel { min-width: 140px; padding: 10px 14px; }
+  #toast { top: 12px; left: 12px; }
+  #exitBtn { top: 12px; left: 12px; }
+}

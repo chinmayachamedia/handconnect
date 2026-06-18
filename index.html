@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HandConnect — Move your hands. Create energy.</title>
+<meta name="description" content="Point a camera at your hands. See what happens.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,0,500;9..144,0,600;9..144,1,300;9..144,1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="src/css/styles.css">
+
+<!-- MediaPipe -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous" defer></script>
+</head>
+<body>
+
+<!-- ADDED: Grain texture overlay (sits over everything on landing, pointer-events: none) -->
+<div class="grain-overlay" aria-hidden="true"></div>
+
+<!-- ADDED: Cursor glow that follows mouse — pure CSS-driven, JS updates position via custom property -->
+<div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
+
+<!-- ───────────────────────────────────────────── -->
+<!--  LANDING PAGE                                  -->
+<!-- ───────────────────────────────────────────── -->
+<div id="landing">
+
+  <header class="topbar">
+    <!-- MODIFIED: Wordmark replaced with custom inline SVG logo + text — integrated, not pasted -->
+    <div class="wordmark" title="(psst: try clicking me)" id="wordmark" role="img" aria-label="HandConnect logo">
+      <!-- ADDED: Custom SVG logo — two fingertips connected by an energy arc -->
+      <svg class="logo-svg" viewBox="0 0 38 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- Left fingertip -->
+        <circle class="logo-tip logo-tip--left" cx="5" cy="13" r="3.2" fill="currentColor" opacity="0.9"/>
+        <!-- Right fingertip -->
+        <circle class="logo-tip logo-tip--right" cx="33" cy="13" r="3.2" fill="currentColor" opacity="0.9"/>
+        <!-- Energy arc — organic, slightly wobbly path -->
+        <path class="logo-arc" d="M8 13 C 12 6, 18 4, 19 13 C 20 22, 26 20, 30 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.7"/>
+        <!-- Spark at peak of arc -->
+        <circle class="logo-spark" cx="19" cy="9.5" r="1.6" fill="currentColor" opacity="0"/>
+        <!-- Small trailing dot left -->
+        <circle cx="11" cy="10" r="0.9" fill="currentColor" opacity="0.35"/>
+        <!-- Small trailing dot right -->
+        <circle cx="27" cy="16" r="0.9" fill="currentColor" opacity="0.35"/>
+      </svg>
+      <span class="wordmark-text">HandConnect</span>
+    </div>
+    <nav class="topbar-nav">
+      <a class="topbar-link" href="#why">Why it exists</a>
+      <!-- ADDED: Small annotated badge, feels handmade -->
+      <span class="nav-annotation" aria-hidden="true">↖ scroll there</span>
+    </nav>
+  </header>
+
+  <!-- ─── HERO ─── -->
+  <section class="hero" id="hero">
+
+    <!-- ADDED: Scattered floating glyphs for ambient life -->
+    <div class="hero-bg-glyphs" aria-hidden="true">
+      <span class="glyph" style="--gx:12%;--gy:22%;--gr:-8deg;--gd:0s">〜</span>
+      <span class="glyph" style="--gx:88%;--gy:14%;--gr:5deg;--gd:1.2s">⌁</span>
+      <span class="glyph" style="--gx:78%;--gy:74%;--gr:-3deg;--gd:2.4s">∿</span>
+      <span class="glyph" style="--gx:6%;--gy:80%;--gr:11deg;--gd:0.6s">◐</span>
+      <span class="glyph" style="--gx:50%;--gy:8%;--gr:-12deg;--gd:3.1s">⚡</span>
+    </div>
+
+    <div class="hero-copy" data-reveal>
+      <!-- MODIFIED: More human, imperfect copy -->
+      <p class="eyebrow">
+        a webcam experiment &nbsp;·&nbsp; no download &nbsp;·&nbsp; late-night project
+      </p>
+
+      <!-- MODIFIED: Expressive heading with italic flourish -->
+      <h1>
+        Your hands,<br>
+        <em>turned into</em><br>
+        <span class="h1-light">light.</span>
+      </h1>
+
+      <!-- MODIFIED: More honest, slightly weird copy -->
+      <p class="hero-hook">
+        No controller. No setup. Just point your camera at your hands
+        and watch what happens. It doesn't do anything useful —
+        that's sort of the point.
+      </p>
+
+      <div class="hero-actions">
+        <!-- MODIFIED: CTA has charge-up micro-interaction -->
+        <button id="startBtn" class="btn-primary" data-text="Try it live">
+          <span class="btn-inner">Try it live</span>
+          <!-- ADDED: Ripple element for click effect -->
+          <span class="btn-ripple" aria-hidden="true"></span>
+        </button>
+        <span class="cam-note">needs camera · chrome works best</span>
+      </div>
+
+      <!-- ADDED: Tiny handwritten-style annotation below CTA -->
+      <p class="cta-annotation" aria-hidden="true">↑ it's free, nothing is saved</p>
+    </div>
+
+    <!-- MODIFIED: Hero visual with parallax depth layers -->
+    <div class="hero-visual" aria-hidden="true" id="heroVisual">
+      <div class="hero-frame" id="heroFrame">
+        <!-- ADDED: "Camera" dots feel -->
+        <div class="hero-cam-bar">
+          <span class="cam-dot"></span>
+          <span class="cam-dot"></span>
+          <span class="cam-dot"></span>
+          <span class="cam-label">webcam</span>
+        </div>
+
+        <!-- MODIFIED: Three depth layers for parallax -->
+        <div class="frame-layer frame-layer--back" id="parallaxBack">
+          <div class="frame-glow-a"></div>
+        </div>
+        <div class="frame-layer frame-layer--mid" id="parallaxMid">
+          <div class="frame-glow-b"></div>
+          <!-- ADDED: Fake hand skeleton hint, SVG -->
+          <svg class="hand-hint" viewBox="0 0 100 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Hand outline illustration">
+            <!-- Palm -->
+            <ellipse cx="50" cy="105" rx="26" ry="22" stroke="rgba(125,217,189,0.3)" stroke-width="1.2"/>
+            <!-- Fingers (rough, slightly uneven — intentional) -->
+            <line x1="30" y1="96" x2="22" y2="52" stroke="rgba(125,217,189,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="40" y1="90" x2="35" y2="38" stroke="rgba(125,217,189,0.3)" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="50" y1="88" x2="49" y2="34" stroke="rgba(125,217,189,0.35)" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="60" y1="90" x2="63" y2="38" stroke="rgba(125,217,189,0.3)" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="70" y1="96" x2="78" y2="57" stroke="rgba(125,217,189,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+            <!-- Thumb -->
+            <line x1="27" y1="108" x2="10" y2="85" stroke="rgba(125,217,189,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+            <!-- Fingertip dots — glow spots -->
+            <circle cx="22" cy="50" r="3" fill="rgba(125,217,189,0.55)" class="tip-pulse"/>
+            <circle cx="35" cy="36" r="3" fill="rgba(167,139,250,0.55)" class="tip-pulse" style="animation-delay:.3s"/>
+            <circle cx="49" cy="32" r="3.5" fill="rgba(125,217,189,0.7)" class="tip-pulse" style="animation-delay:.6s"/>
+            <circle cx="63" cy="36" r="3" fill="rgba(167,139,250,0.55)" class="tip-pulse" style="animation-delay:.9s"/>
+            <circle cx="78" cy="55" r="3" fill="rgba(125,217,189,0.55)" class="tip-pulse" style="animation-delay:1.2s"/>
+            <circle cx="10" cy="83" r="2.5" fill="rgba(167,139,250,0.45)" class="tip-pulse" style="animation-delay:1.5s"/>
+          </svg>
+        </div>
+        <div class="frame-layer frame-layer--fore" id="parallaxFore">
+          <!-- ADDED: Trailing particle dots, animating -->
+          <div class="particle-field">
+            <span class="dot" style="--dx:32%;--dy:58%;--ds:2.8px;--dd:0s"></span>
+            <span class="dot" style="--dx:48%;--dy:44%;--ds:2px;--dd:.4s"></span>
+            <span class="dot" style="--dx:61%;--dy:62%;--ds:3.2px;--dd:.8s"></span>
+            <span class="dot" style="--dx:25%;--dy:39%;--ds:2px;--dd:1.2s"></span>
+            <span class="dot" style="--dx:70%;--dy:48%;--ds:2.5px;--dd:1.6s"></span>
+            <span class="dot dot--purple" style="--dx:40%;--dy:70%;--ds:2.2px;--dd:.3s"></span>
+            <span class="dot dot--purple" style="--dx:55%;--dy:30%;--ds:3px;--dd:1s"></span>
+          </div>
+        </div>
+
+        <!-- ADDED: Bottom caption, monospace, slightly imperfect positioning -->
+        <p class="frame-caption">move your hands →<br>create energy</p>
+      </div>
+
+      <!-- ADDED: Off-frame annotation that bleeds past the card edge -->
+      <p class="visual-note" aria-hidden="true">this is live, not a video</p>
+    </div>
+  </section>
+
+  <!-- ─── FEATURES ─── -->
+  <!-- MODIFIED: Slightly asymmetric section, staggered reveals -->
+  <section class="experiences" id="experiences">
+    <p class="section-label" data-reveal>What it actually feels like</p>
+
+    <div class="exp-grid">
+      <!-- MODIFIED: Cards have slight individual rotations & offsets for craft feel -->
+      <div class="exp-card" style="--card-rot: -0.6deg; --card-top: 0px" data-reveal data-delay="0">
+        <div class="exp-icon">〜</div>
+        <h3>Light follows your fingertips</h3>
+        <p>Every tip leaves a glowing trail. Sparks that drift and settle — like static you can actually see.</p>
+        <!-- ADDED: Card corner squiggle detail -->
+        <span class="card-corner" aria-hidden="true">✦</span>
+      </div>
+
+      <div class="exp-card exp-card--wide" style="--card-rot: 0.4deg; --card-top: 8px" data-reveal data-delay="80">
+        <div class="exp-icon">⌁</div>
+        <h3>Bring your hands close and something builds</h3>
+        <p>A current starts forming between them. Pinch — and it snaps. A small shock of light and sound that's weirdly satisfying to keep doing.</p>
+        <span class="card-corner" aria-hidden="true">✦</span>
+      </div>
+
+      <div class="exp-card" style="--card-rot: 0.8deg; --card-top: -4px" data-reveal data-delay="160">
+        <div class="exp-icon">∿</div>
+        <h3>Sound that listens to distance</h3>
+        <p>A hum rises the closer your hands get. Think of it as an instrument you can't play wrong.</p>
+        <span class="card-corner" aria-hidden="true">✦</span>
+      </div>
+
+      <div class="exp-card" style="--card-rot: -0.3deg; --card-top: 6px" data-reveal data-delay="240">
+        <div class="exp-icon">◐</div>
+        <h3>Five moods, one switch</h3>
+        <p>Ocean glow. Cyberpunk glitch. Lava pour. Galaxy drift. Same hands, completely different world.</p>
+        <span class="card-corner" aria-hidden="true">✦</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── WHY ─── -->
+  <section class="why" id="why">
+    <div class="why-label" data-reveal>
+      <p class="section-label">Why it exists</p>
+      <!-- ADDED: Doodle arrow pointing at body text -->
+      <svg class="why-arrow" viewBox="0 0 60 40" fill="none" aria-hidden="true">
+        <path d="M4 8 C 20 4, 50 16, 54 34" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="3 3"/>
+        <path d="M48 32 L 54 34 L 50 27" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="why-body" data-reveal data-delay="100">
+      <!-- MODIFIED: More personal, late-night voice -->
+      <p>
+        HandConnect started somewhere around 2am as a question:
+        <em>what if a webcam and a hand model were the only ingredients,
+        and the only goal was to make something that felt good to be inside?</em>
+      </p>
+      <p>
+        No account. No app to download. No data collected.
+        Just a browser tab, your camera, and an hour of your hands making light.
+        It's interactive art — quietly, without announcing it.
+      </p>
+
+      <!-- ADDED: Aside callout — feels editorial, human -->
+      <aside class="why-aside">
+        <span class="aside-marker">note —</span>
+        Built entirely with MediaPipe Hands, canvas, and Web Audio.
+        The model runs in your browser. Nothing leaves your device.
+      </aside>
+    </div>
+  </section>
+
+  <!-- ADDED: Pre-footer CTA strip — feels like an interlude, not a section -->
+  <div class="prefooter-strip" data-reveal>
+    <p class="prefooter-text">still reading? just try it.</p>
+    <button class="btn-ghost" id="startBtn2">open the experience →</button>
+  </div>
+
+  <!-- ADDED: Personal signature — subtle, discoverable, handcrafted feel -->
+  <div class="dev-signature" id="devSignature" aria-label="developed by Chinmaya Chamedia">
+    <span class="sig-slash" aria-hidden="true">/</span>
+    <span class="sig-text">developed by <strong>chinmaya chamedia</strong></span>
+    <span class="sig-dot" aria-hidden="true">·</span>
+  </div>
+
+  <footer class="landing-footer">
+    <p>Built with MediaPipe Hands, canvas, and a bit of Web Audio.</p>
+    <!-- ADDED: Tiny easter egg hint -->
+    <p class="footer-secret" id="footerSecret" aria-label="Easter egg hint">· · ·</p>
+  </footer>
+</div>
+
+<!-- ───────────────────────────────────────────── -->
+<!--  LIVE AR EXPERIENCE (unchanged structure)      -->
+<!-- ───────────────────────────────────────────── -->
+<div id="experience" hidden>
+
+  <div id="video-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="fxCanvas"></canvas>
+  </div>
+
+  <button id="exitBtn" aria-label="Exit experience">← Back</button>
+
+  <div id="hud">
+    <div class="panel">
+      <div class="panel-title">System</div>
+      <div class="stat">Hands <span class="val" id="ui-hands">0</span></div>
+      <div class="stat">FPS <span class="val" id="ui-fps">0</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Gesture</div>
+      <div class="stat">Type <span class="val" id="ui-gesture">—</span></div>
+      <div class="stat">Spread <span class="val" id="ui-spread">0%</span></div>
+    </div>
+  </div>
+
+  <div id="toast">PINCH!</div>
+
+  <div id="themes">
+    <button class="tbtn active" data-theme="Rainbow">Rainbow</button>
+    <button class="tbtn" data-theme="Cyberpunk">Cyberpunk</button>
+    <button class="tbtn" data-theme="Lava">Lava</button>
+    <button class="tbtn" data-theme="Ocean">Ocean</button>
+    <button class="tbtn" data-theme="Galaxy">Galaxy</button>
+  </div>
+</div>
+
+<script src="src/js/hand-engine.js"></script>
+<!-- ADDED: Landing page enhancement script (does NOT touch experience logic) -->
+<script src="src/js/landing.js"></script>
+</body>
+</html>
