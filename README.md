@@ -75,7 +75,7 @@ In parallel, a Web Audio oscillator listens to how close your two hands are and 
 ## Installation
 
 ```bash
-git clone https://github.com/your-username/handconnect.git
+git clone https://chinmayachamedia.github.io/handconnect.git
 cd handconnect
 ```
 
